@@ -19,6 +19,12 @@ public final class MiniDiscFormat {
     $8CC - $32 = $89A = 2202 clusters
     */
     public static final int MD74_AUDIO_CLUSTERS = 2202;
+
+    public static final int MD74_LEAD_OUT_START =
+            LEAD_IN_CLUSTERS + UTOC_AND_SYSTEM_CLUSTERS + MD74_AUDIO_CLUSTERS;
+
+    public static final int MD74_TOTAL_CLUSTERS =
+            LEAD_IN_CLUSTERS + UTOC_AND_SYSTEM_CLUSTERS + MD74_AUDIO_CLUSTERS + LEAD_OUT_CLUSTERS;
     /*
     @see https://www.minidisc.org/French_tech/section4.html
     1 cluster = 176 soundgroups x 11,6 ms = 2,0416 secondes
@@ -26,11 +32,12 @@ public final class MiniDiscFormat {
      */
     public static final int MD60_AUDIO_CLUSTERS = 1763;
 
+    public static final int MD_60_LEAD_OUT_START =
+            LEAD_IN_CLUSTERS + UTOC_AND_SYSTEM_CLUSTERS + MD60_AUDIO_CLUSTERS;
+
     public static final int MD60_TOTAL_CLUSTERS =
             LEAD_IN_CLUSTERS + UTOC_AND_SYSTEM_CLUSTERS + MD60_AUDIO_CLUSTERS + LEAD_OUT_CLUSTERS;
 
-    public static final int MD74_TOTAL_CLUSTERS =
-            LEAD_IN_CLUSTERS + UTOC_AND_SYSTEM_CLUSTERS + MD74_AUDIO_CLUSTERS + LEAD_OUT_CLUSTERS;
 
     public static long expectedImageBytes(int totalClusters) {
         return (long) totalClusters * SECTORS_PER_CLUSTER * SECTOR_BYTES;
