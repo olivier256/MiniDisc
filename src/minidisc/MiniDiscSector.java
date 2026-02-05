@@ -3,30 +3,28 @@ package minidisc;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static minidisc.MiniDiscFormat.SECTOR_BYTES;
-
 public final class MiniDiscSector {
+    // Layout common
     public static final int SYNC_BYTES = 12;
-    public static final int HEADER_BYTES = 4;     // 2 cluster + 1 sector + 1 mode
-    public static final int SEP_BYTES = 4;        // 4x00
-    public static final int HEADER_OFFSET = 12;   // after sync
-    public static final int SEP_OFFSET = 16;      // after sync+header
-    public static final int AUDIO_BLOCK_OFFSET = 20;  // after sync+header+sep
-    public static final int AUDIO_BLOCK_BYTES = SECTOR_BYTES - AUDIO_BLOCK_OFFSET; // 2332
+    public static final int HEADER_OFFSET = 12; // after sync
+    public static final int MODE_OFFSET = 15;   // HEADER_OFFSET + 3
+    public static final int TOC_DATA_OFFSET = 16;   // no 4x00 separator
+    public static final int AUDIO_SEP_OFFSET = 16;  // 4x00 separator
+    public static final int AUDIO_BLOCK_OFFSET = 20;
 
-    // TODO: remplacer par la vraie séquence si vous la figez.
+    public static final int TOC_DATA_BYTES = MiniDiscFormat.SECTOR_BYTES - TOC_DATA_OFFSET;     // 2336
+    public static final int AUDIO_BLOCK_BYTES = MiniDiscFormat.SECTOR_BYTES - AUDIO_BLOCK_OFFSET; // 2332
+
+    // TODO: replace with the real sync pattern when you decide it.
     private static final byte[] DEFAULT_SYNC = new byte[SYNC_BYTES];
 
-    private final byte[] raw; // always 2352
+    private final byte[] raw2352; // always 2352
 
-    /**
-     * Beware: wraps without copying. Use carefully.
-     */
     private MiniDiscSector(byte[] raw2352) {
-        if (raw2352 == null || raw2352.length != SECTOR_BYTES) {
-            throw new IllegalArgumentException("raw must be exactly " + SECTOR_BYTES + " bytes");
+        if (raw2352 == null || raw2352.length != MiniDiscFormat.SECTOR_BYTES) {
+            throw new IllegalArgumentException("raw must be exactly " + MiniDiscFormat.SECTOR_BYTES + " bytes");
         }
-        this.raw = raw2352;
+        this.raw2352 = raw2352;
     }
 
     /**
@@ -34,10 +32,10 @@ public final class MiniDiscSector {
      */
     public static MiniDiscSector fromRaw(byte[] raw2352) {
         Objects.requireNonNull(raw2352, "raw2352");
-        if (raw2352.length != SECTOR_BYTES) {
-            throw new IllegalArgumentException("raw must be exactly " + SECTOR_BYTES + " bytes");
+        if (raw2352.length != MiniDiscFormat.SECTOR_BYTES) {
+            throw new IllegalArgumentException("raw must be exactly " + MiniDiscFormat.SECTOR_BYTES + " bytes");
         }
-        return new MiniDiscSector(Arrays.copyOf(raw2352, SECTOR_BYTES));
+        return new MiniDiscSector(Arrays.copyOf(raw2352, MiniDiscFormat.SECTOR_BYTES));
     }
 
     /**
@@ -48,51 +46,75 @@ public final class MiniDiscSector {
     }
 
     /**
-     * Builds an audio DATA sector (mode=2) from address + full 2332-byte payload.
+     * Audio sector: header + 4x00 separator + 2332-byte Audio Block. Mode forced to 2.
      */
     public static MiniDiscSector fromAddressAndAudioBlock(MiniDiscAddress addr, byte[] audioBlock2332) {
         Objects.requireNonNull(addr, "addr");
-        Objects.requireNonNull(audioBlock2332, "payload2332");
+        Objects.requireNonNull(audioBlock2332, "audioBlock2332");
 
         if (addr.sectorRole() != SectorRole.DATA) {
-            throw new IllegalArgumentException("Audio payload can only be written to DATA sectors (0..31)");
+            throw new IllegalArgumentException("AudioBlock can only be written to DATA sectors (0..31)");
         }
         if (audioBlock2332.length != AUDIO_BLOCK_BYTES) {
-            throw new IllegalArgumentException("payload must be exactly " + AUDIO_BLOCK_BYTES + " bytes");
+            throw new IllegalArgumentException("AudioBlock must be exactly " + AUDIO_BLOCK_BYTES + " bytes");
         }
 
-        byte[] raw = new byte[SECTOR_BYTES];
+        byte[] raw = new byte[MiniDiscFormat.SECTOR_BYTES];
 
         // sync (12)
         System.arraycopy(DEFAULT_SYNC, 0, raw, 0, SYNC_BYTES);
 
-        // header: address (3) + mode (1)
-        addr.writeToHeader(raw, HEADER_OFFSET); // writes clusterHi, clusterLo, sectorAddressByte
-        raw[HEADER_OFFSET + 3] = 0x02;          // mode = 2 (MiniDisc)
+        // address (3) + mode (1)
+        addr.writeAddressToHeader(raw, HEADER_OFFSET);
+        raw[MODE_OFFSET] = MiniDiscSectorMode.MINI_DISC.code();
 
-        // separator 4x00 already zero by default, but keep explicitness if you want:
-        raw[SEP_OFFSET] = 0;
-        raw[SEP_OFFSET + 1] = 0;
-        raw[SEP_OFFSET + 2] = 0;
-        raw[SEP_OFFSET + 3] = 0;
+        // 4x00 separator (already zeros, keep explicit if you prefer)
+        raw[AUDIO_SEP_OFFSET] = 0;
+        raw[AUDIO_SEP_OFFSET + 1] = 0;
+        raw[AUDIO_SEP_OFFSET + 2] = 0;
+        raw[AUDIO_SEP_OFFSET + 3] = 0;
 
-        // payload (2332)
+        // audio block (2332) at offset 20
         System.arraycopy(audioBlock2332, 0, raw, AUDIO_BLOCK_OFFSET, AUDIO_BLOCK_BYTES);
 
         return new MiniDiscSector(raw);
     }
 
     /**
-     * Returns a copy to preserve immutability.
+     * TOC/UTOC-like sector: header immediately followed by 2336 bytes data. Mode forced to 2.
      */
-    public byte[] toRaw() {
-        return Arrays.copyOf(raw, SECTOR_BYTES);
+    public static MiniDiscSector fromAddressAndTocData(MiniDiscAddress addr, byte[] tocData2336) {
+        Objects.requireNonNull(addr, "addr");
+        Objects.requireNonNull(tocData2336, "tocData2336");
+
+        if (tocData2336.length != TOC_DATA_BYTES) {
+            throw new IllegalArgumentException("TOC data must be exactly " + TOC_DATA_BYTES + " bytes");
+        }
+
+        byte[] raw = new byte[MiniDiscFormat.SECTOR_BYTES];
+
+        System.arraycopy(DEFAULT_SYNC, 0, raw, 0, SYNC_BYTES);
+
+        addr.writeAddressToHeader(raw, HEADER_OFFSET);
+        raw[MODE_OFFSET] = MiniDiscSectorMode.MINI_DISC.code();
+
+        // TOC data starts right after header at offset 16
+        System.arraycopy(tocData2336, 0, raw, TOC_DATA_OFFSET, TOC_DATA_BYTES);
+
+        return new MiniDiscSector(raw);
     }
 
     /**
-     * Internal use only (if you want zero-copy pipelines, expose carefully).
+     * Safe copy out.
      */
-    public byte[] rawUnsafe() {
-        return raw;
+    public byte[] toRaw2352() {
+        return Arrays.copyOf(raw2352, MiniDiscFormat.SECTOR_BYTES);
+    }
+
+    /**
+     * Internal/fast path. Do not mutate unless you own the instance.
+     */
+    byte[] rawUnsafe() {
+        return raw2352;
     }
 }

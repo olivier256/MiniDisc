@@ -1,6 +1,5 @@
 package minidisc;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Objects;
@@ -18,14 +17,18 @@ public final class FileMiniDiscImage implements MiniDiscImage {
 
     public FileMiniDiscImage(RandomAccessFile raf, int clusters) throws IOException {
         this.raf = Objects.requireNonNull(raf, "raf");
+        if (clusters <= 0) throw new IllegalArgumentException("clusters must be > 0: " + clusters);
         this.clusters = clusters;
 
-        long expected = MiniDiscFormat.expectedImageBytes(clusters);
-        long actual = raf.length();
-        if (actual != expected) {
-            throw new IllegalStateException(
-                    "Invalid MiniDisc image size: expected " + expected + " bytes (" + clusters + " clusters), got " + actual);
+        long expectedSize = expectedSizeBytes(clusters);
+        long actualSize = raf.length();
+        if (actualSize != expectedSize) {
+            throw new IllegalArgumentException("Invalid image size. expected=" + expectedSize + " actual=" + actualSize);
         }
+    }
+
+    public static long expectedSizeBytes(int clusters) {
+        return (long) clusters * MiniDiscFormat.SECTORS_PER_CLUSTER * MiniDiscFormat.SECTOR_BYTES;
     }
 
     @Override
@@ -35,42 +38,29 @@ public final class FileMiniDiscImage implements MiniDiscImage {
 
     @Override
     public void readSector(int clusterIndex, int sectorIndex, byte[] out2352) throws IOException {
-        requireAddr(clusterIndex, sectorIndex);
-        requireBuf(out2352, MiniDiscFormat.SECTOR_BYTES);
-
-        long pos = byteOffset(clusterIndex, sectorIndex);
-        raf.seek(pos);
-
-        try {
-            raf.readFully(out2352, 0, MiniDiscFormat.SECTOR_BYTES);
-        } catch (EOFException e) {
-            // ne devrait jamais arriver si la taille a été validée
-            throw new IOException("Unexpected EOF at offset " + pos, e);
+        validateAddress(clusterIndex, sectorIndex);
+        Objects.requireNonNull(out2352, "out2352");
+        if (out2352.length != MiniDiscFormat.SECTOR_BYTES) {
+            throw new IllegalArgumentException("out2352 must be exactly " + MiniDiscFormat.SECTOR_BYTES + " bytes");
         }
+
+        raf.seek(byteOffset(clusterIndex, sectorIndex));
+        raf.readFully(out2352);
     }
 
     @Override
     public void writeSector(int clusterIndex, int sectorIndex, byte[] in2352) throws IOException {
-        requireAddr(clusterIndex, sectorIndex);
-        requireBuf(in2352, MiniDiscFormat.SECTOR_BYTES);
-
-        long pos = byteOffset(clusterIndex, sectorIndex);
-        raf.seek(pos);
-        raf.write(in2352, 0, MiniDiscFormat.SECTOR_BYTES);
-    }
-
-    @Override
-    public void close() throws IOException {
-        raf.close();
-    }
-
-    private static void requireBuf(byte[] buf, int expected) {
-        if (buf == null || buf.length < expected) {
-            throw new IllegalArgumentException("Buffer must be at least " + expected + " bytes");
+        validateAddress(clusterIndex, sectorIndex);
+        Objects.requireNonNull(in2352, "in2352");
+        if (in2352.length != MiniDiscFormat.SECTOR_BYTES) {
+            throw new IllegalArgumentException("in2352 must be exactly " + MiniDiscFormat.SECTOR_BYTES + " bytes");
         }
+
+        raf.seek(byteOffset(clusterIndex, sectorIndex));
+        raf.write(in2352);
     }
 
-    private void requireAddr(int clusterIndex, int sectorIndex) {
+    private void validateAddress(int clusterIndex, int sectorIndex) {
         if (clusterIndex < 0 || clusterIndex >= clusters) {
             throw new IllegalArgumentException("clusterIndex out of range: " + clusterIndex);
         }
@@ -82,5 +72,10 @@ public final class FileMiniDiscImage implements MiniDiscImage {
     private static long byteOffset(int clusterIndex, int sectorIndex) {
         long sectorNumber = (long) clusterIndex * MiniDiscFormat.SECTORS_PER_CLUSTER + sectorIndex;
         return sectorNumber * MiniDiscFormat.SECTOR_BYTES;
+    }
+
+    @Override
+    public void close() throws IOException {
+        raf.close();
     }
 }

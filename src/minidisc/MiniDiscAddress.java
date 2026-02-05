@@ -1,48 +1,31 @@
 package minidisc;
 
-public final class MiniDiscAddress {
-    private final int clusterIndex; // 0..N
-    private final int sectorIndex;  // 0..35
-
-    public MiniDiscAddress(int clusterIndex, int sectorIndex) {
+/**
+ * Logical address in the image: cluster + sectorIndex (0..35).
+ * This is NOT the “sector address byte” written in headers (FC/FD/... for LINK/SUBDATA).
+ */
+public record MiniDiscAddress(int clusterIndex, int sectorIndex) {
+    public MiniDiscAddress {
         if (clusterIndex < 0 || clusterIndex > 0xFFFF) {
             throw new IllegalArgumentException("clusterIndex out of range: " + clusterIndex);
         }
-        if (sectorIndex < 0 || sectorIndex >= 36) {
+        if (sectorIndex < 0 || sectorIndex >= MiniDiscFormat.SECTORS_PER_CLUSTER) {
             throw new IllegalArgumentException("sectorIndex out of range: " + sectorIndex);
         }
-        this.clusterIndex = clusterIndex;
-        this.sectorIndex = sectorIndex;
-    }
-
-    public int clusterIndex() {
-        return clusterIndex;
-    }
-
-    /**
-     * Returns the logical MiniDisc sector address byte (0…35).
-     */
-    public int sectorIndex() {
-        return sectorIndex;
     }
 
     public SectorRole sectorRole() {
-        return SectorRole.fromSectorIndex(sectorIndex);
+        return SectorRole.fromSectorIndexUnsafe(sectorIndex);
     }
 
-    /**
-     * Returns the MiniDisc sector address byte (0x00…0xFF, as stored in header / subdata).
-     */
     public byte sectorAddressByte() {
         return sectorRole().toSectorAddress(sectorIndex);
     }
 
     /**
-     * Writes the address bytes as stored in a MiniDisc sector header:
-     * - 2 bytes cluster address (big-endian)
-     * - 1 byte sector address
+     * Writes 2 bytes cluster (big-endian) + 1 byte sector-address into raw sector header.
      */
-    public void writeToHeader(byte[] raw2352, int offset) {
+    public void writeAddressToHeader(byte[] raw2352, int offset) {
         raw2352[offset] = (byte) ((clusterIndex >>> 8) & 0xFF);
         raw2352[offset + 1] = (byte) (clusterIndex & 0xFF);
         raw2352[offset + 2] = sectorAddressByte();
