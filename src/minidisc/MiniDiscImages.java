@@ -4,7 +4,7 @@ public final class MiniDiscImages {
     private MiniDiscImages() {
     }
 
-    public static LayoutCheckedMiniDiscImage of(
+    private static LayoutCheckedMiniDiscImage of(
             MiniDiscDiscType type,
             MiniDiscImage raw
     ) {
@@ -15,7 +15,7 @@ public final class MiniDiscImages {
                 MiniDiscLayout.UTOC_START,
                 MiniDiscLayout.UTOC_END_EXCL,
                 MiniDiscLayout.PROGRAM_START,
-                MiniDiscLayout.leadOutStartExcl(type),
+                MiniDiscLayout.programEndExclusive(type),
                 MiniDiscLayout.LEAD_OUT_CLUSTERS
         );
     }
@@ -26,5 +26,8 @@ public final class MiniDiscImages {
 
     public static LayoutCheckedMiniDiscImage md74(MiniDiscImage raw) {
         return of(MiniDiscDiscType.MD74, raw);
+    }
+    public static LayoutCheckedMiniDiscImage md80(MiniDiscImage raw) {
+        return of(MiniDiscDiscType.MD80, raw);
     }
 }

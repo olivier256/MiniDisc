@@ -13,11 +13,11 @@ public final class MiniDiscLayout {
     private MiniDiscLayout() {
     }
 
-    public static int leadOutStartExcl(MiniDiscDiscType type) {
+    public static int programEndExclusive(MiniDiscDiscType type) {
         return PROGRAM_START + type.programClusters();
     }
 
     public static int totalClusters(MiniDiscDiscType type) {
-        return leadOutStartExcl(type) + LEAD_OUT_CLUSTERS;
+        return programEndExclusive(type) + LEAD_OUT_CLUSTERS;
     }
 }

@@ -15,7 +15,7 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
     private final int utocStartClusterInclusive;     // typically 3
     private final int utocEndClusterExclusive;       // typically 0x32
     private final int programStartClusterInclusive;  // typically 0x32
-    private final int leadOutStartClusterExclusive;  // 0x0715 (MD60) or 0x08CC (MD74)
+    private final int programEndClusterExclusive;  // 0x0715 (MD60) or 0x08CC (MD74)
     private final int leadOutClusters;               // typically 115
 
     public LayoutCheckedMiniDiscImage(
@@ -25,7 +25,7 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
             int utocStartClusterInclusive,
             int utocEndClusterExclusive,
             int programStartClusterInclusive,
-            int leadOutStartClusterExclusive,
+            int programEndClusterExclusive,
             int leadOutClusters
     ) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
@@ -33,7 +33,7 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
         if (!(leadInStartClusterInclusive < leadInEndClusterExclusive &&
                 leadInEndClusterExclusive <= utocStartClusterInclusive &&
                 utocEndClusterExclusive <= programStartClusterInclusive &&
-                programStartClusterInclusive < leadOutStartClusterExclusive)) {
+                programStartClusterInclusive < programEndClusterExclusive)) {
             throw new IllegalArgumentException("Incoherent cluster layout");
         }
         // Optionnel mais probablement vrai dans votre intention :
@@ -41,7 +41,7 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
             throw new IllegalArgumentException("Invalid UTOC range");
         }
 
-        int expected = leadOutStartClusterExclusive + leadOutClusters;
+        int expected = programEndClusterExclusive + leadOutClusters;
         if (delegate.nbOfClusters() != expected) {
             throw new IllegalArgumentException(
                     "Image cluster count mismatch: expected " + expected + ", got " + delegate.nbOfClusters()
@@ -53,7 +53,7 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
         this.utocStartClusterInclusive = utocStartClusterInclusive;
         this.utocEndClusterExclusive = utocEndClusterExclusive;
         this.programStartClusterInclusive = programStartClusterInclusive;
-        this.leadOutStartClusterExclusive = leadOutStartClusterExclusive;
+        this.programEndClusterExclusive = programEndClusterExclusive;
         this.leadOutClusters = leadOutClusters;
     }
 
@@ -94,7 +94,9 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
     }
 
     private void validateInProgramArea(int clusterIndex) {
-        if (clusterIndex < programStartClusterInclusive || clusterIndex >= leadOutStartClusterExclusive) {
+        if (programStartClusterInclusive <= clusterIndex && clusterIndex < programEndClusterExclusive) {
+            return;
+        } else {
             throw new IllegalArgumentException("Cluster not in program area: " + clusterIndex);
         }
     }

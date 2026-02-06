@@ -1,17 +1,24 @@
 package minidisc;
 
-public enum MiniDiscDiscType {
-    /*
-    @see https://www.minidisc.org/French_tech/section4.html
-    1 cluster = 176 soundgroups x 11,6 ms = 2,0416 secondes
-    60 minutes = 3600s ; 3600 / 2.0416 ~ 1763.6 ~ 1763 (=> 50 min 59.34s)
+    /**
+    1 sound group = 11.6ms
+    11 sound groups = 2 secteurs audio
+    1 cluster
+    = 32 secteurs audio
+    = 16 x 2 secteurs audio
+    = 16 x 11 sound groups
+    = 176 sound groups
+    = 2,0416ms
+     @see <A href="https://www.minidisc.org/French_tech/section4.html">Structure des données sur le disque</A>
      */
-    MD60(1763),
+public enum MiniDiscDiscType {
+    MD60(1764),
     /*
-    @see https://www.minidisc.org/French_tech/section11.html
+    @see <a href="https://www.minidisc.org/French_tech/section11.html">Les types de MiniDisc et leurs structures</a>
     $8CC - $32 = $89A = 2202 clusters
     */
-    MD74(2202);
+    MD74(2202),
+    MD80(2352);
 
     private final int programClusters;
 
@@ -23,11 +30,11 @@ public enum MiniDiscDiscType {
         return programClusters;
     }
 
-    public int leadOutStartExclusive() {
+    public int programEndExclusive() {
         return MiniDiscLayout.PROGRAM_START + programClusters;
     }
 
     public int totalClusters() {
-        return leadOutStartExclusive() + MiniDiscLayout.LEAD_OUT_CLUSTERS;
+        return programEndExclusive() + MiniDiscLayout.LEAD_OUT_CLUSTERS;
     }
 }
