@@ -27,6 +27,7 @@ public final class MiniDiscImages {
     public static LayoutCheckedMiniDiscImage md74(MiniDiscImage raw) {
         return of(MiniDiscDiscType.MD74, raw);
     }
+
     public static LayoutCheckedMiniDiscImage md80(MiniDiscImage raw) {
         return of(MiniDiscDiscType.MD80, raw);
     }
