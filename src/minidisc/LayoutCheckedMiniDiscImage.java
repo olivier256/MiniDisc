@@ -18,97 +18,48 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
     private final int leadOutStartClusterExclusive;  // 0x0715 (MD60) or 0x08CC (MD74)
     private final int leadOutClusters;               // typically 115
 
-    private LayoutCheckedMiniDiscImage(Builder b) {
-        this.delegate = b.delegate;
-        this.leadInStartClusterInclusive = b.leadInStartClusterInclusive;
-        this.leadInEndClusterExclusive = b.leadInEndClusterExclusive;
-        this.utocStartClusterInclusive = b.utocStartClusterInclusive;
-        this.utocEndClusterExclusive = b.utocEndClusterExclusive;
-        this.programStartClusterInclusive = b.programStartClusterInclusive;
-        this.leadOutStartClusterExclusive = b.leadOutStartClusterExclusive;
-        this.leadOutClusters = b.leadOutClusters;
-    }
+    public LayoutCheckedMiniDiscImage(
+            MiniDiscImage delegate,
+            int leadInStartClusterInclusive,
+            int leadInEndClusterExclusive,
+            int utocStartClusterInclusive,
+            int utocEndClusterExclusive,
+            int programStartClusterInclusive,
+            int leadOutStartClusterExclusive,
+            int leadOutClusters
+    ) {
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
 
-    public static final class Builder {
-        private final MiniDiscImage delegate;
-        private Integer leadInStartClusterInclusive;
-        private Integer leadInEndClusterExclusive;
-        private Integer utocStartClusterInclusive;
-        private Integer utocEndClusterExclusive;
-        private Integer programStartClusterInclusive;
-        private Integer leadOutStartClusterExclusive;
-        private Integer leadOutClusters;
-
-        public Builder(MiniDiscImage delegate) {
-            this.delegate = Objects.requireNonNull(delegate, "delegate");
+        if (!(leadInStartClusterInclusive < leadInEndClusterExclusive &&
+                leadInEndClusterExclusive <= utocStartClusterInclusive &&
+                utocEndClusterExclusive <= programStartClusterInclusive &&
+                programStartClusterInclusive < leadOutStartClusterExclusive)) {
+            throw new IllegalArgumentException("Incoherent cluster layout");
+        }
+        // Optionnel mais probablement vrai dans votre intention :
+        if (utocStartClusterInclusive >= utocEndClusterExclusive) {
+            throw new IllegalArgumentException("Invalid UTOC range");
         }
 
-        public Builder withLeadInStartClusterInclusive(int v) {
-            this.leadInStartClusterInclusive = v;
-            return this;
+        int expected = leadOutStartClusterExclusive + leadOutClusters;
+        if (delegate.nbOfClusters() != expected) {
+            throw new IllegalArgumentException(
+                    "Image cluster count mismatch: expected " + expected + ", got " + delegate.nbOfClusters()
+            );
         }
 
-        public Builder withLeadInEndClusterExclusive(int v) {
-            this.leadInEndClusterExclusive = v;
-            return this;
-        }
-
-        public Builder withUtocStartClusterInclusive(int v) {
-            this.utocStartClusterInclusive = v;
-            return this;
-        }
-
-        public Builder withProgramStartClusterInclusive(int v) {
-            this.programStartClusterInclusive = v;
-            return this;
-        }
-
-        public Builder withLeadOutStartClusterExclusive(int v) {
-            this.leadOutStartClusterExclusive = v;
-            return this;
-        }
-
-        public Builder withLeadOutClusters(int v) {
-            this.leadOutClusters = v;
-            return this;
-        }
-
-        public LayoutCheckedMiniDiscImage build() {
-            // présence de tous les paramètres
-            if (leadInStartClusterInclusive == null ||
-                    leadInEndClusterExclusive == null ||
-                    utocStartClusterInclusive == null ||
-                    programStartClusterInclusive == null ||
-                    leadOutStartClusterExclusive == null ||
-                    leadOutClusters == null) {
-                throw new IllegalStateException("Incomplete layout configuration");
-            }
-
-            // cohérence structurelle
-            if (!(leadInStartClusterInclusive < leadInEndClusterExclusive &&
-                    leadInEndClusterExclusive <= utocStartClusterInclusive &&
-                    utocStartClusterInclusive <= programStartClusterInclusive &&
-                    programStartClusterInclusive < leadOutStartClusterExclusive)) {
-                throw new IllegalArgumentException("Incoherent cluster layout");
-            }
-
-            int expectedTotalClusters =
-                    leadOutStartClusterExclusive + leadOutClusters;
-
-            if (delegate.clusterCount() != expectedTotalClusters) {
-                throw new IllegalArgumentException(
-                        "Image cluster count mismatch: expected " +
-                                expectedTotalClusters + ", got " + delegate.clusterCount()
-                );
-            }
-
-            return new LayoutCheckedMiniDiscImage(this);
-        }
+        this.leadInStartClusterInclusive = leadInStartClusterInclusive;
+        this.leadInEndClusterExclusive = leadInEndClusterExclusive;
+        this.utocStartClusterInclusive = utocStartClusterInclusive;
+        this.utocEndClusterExclusive = utocEndClusterExclusive;
+        this.programStartClusterInclusive = programStartClusterInclusive;
+        this.leadOutStartClusterExclusive = leadOutStartClusterExclusive;
+        this.leadOutClusters = leadOutClusters;
     }
 
     @Override
-    public int clusterCount() {
-        return delegate.clusterCount();
+    public int nbOfClusters() {
+        return delegate.nbOfClusters();
     }
 
     @Override

@@ -4,7 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 public interface MiniDiscImage extends Closeable {
-    int clusterCount();
+    int nbOfClusters();
 
     void readSector(int clusterIndex, int sectorIndex, byte[] out2352) throws IOException;
 

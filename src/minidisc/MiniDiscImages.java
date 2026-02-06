@@ -8,16 +8,16 @@ public final class MiniDiscImages {
             MiniDiscDiscType type,
             MiniDiscImage raw
     ) {
-        return new LayoutCheckedMiniDiscImage.Builder(raw)
-                .withLeadInStartClusterInclusive(MiniDiscLayout.LEAD_IN_START)
-                .withLeadInEndClusterExclusive(MiniDiscLayout.LEAD_IN_END_EXCL)
-                .withUtocStartClusterInclusive(MiniDiscLayout.UTOC_START)
-                .withProgramStartClusterInclusive(MiniDiscLayout.PROGRAM_START)
-                .withLeadOutStartClusterExclusive(
-                        MiniDiscLayout.leadOutStartExcl(type)
-                )
-                .withLeadOutClusters(MiniDiscLayout.LEAD_OUT_CLUSTERS)
-                .build();
+        return new LayoutCheckedMiniDiscImage(
+                raw,
+                MiniDiscLayout.LEAD_IN_START,
+                MiniDiscLayout.LEAD_IN_END_EXCL,
+                MiniDiscLayout.UTOC_START,
+                MiniDiscLayout.UTOC_END_EXCL,
+                MiniDiscLayout.PROGRAM_START,
+                MiniDiscLayout.leadOutStartExcl(type),
+                MiniDiscLayout.LEAD_OUT_CLUSTERS
+        );
     }
 
     public static LayoutCheckedMiniDiscImage md60(MiniDiscImage raw) {

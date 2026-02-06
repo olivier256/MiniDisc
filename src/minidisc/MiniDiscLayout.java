@@ -5,6 +5,7 @@ public final class MiniDiscLayout {
     public static final int LEAD_IN_END_EXCL = 0x0003;
 
     public static final int UTOC_START = 0x0003;
+    public static final int UTOC_END_EXCL = 0x0032;
     public static final int PROGRAM_START = 0x0032;
 
     public static final int LEAD_OUT_CLUSTERS = 115;

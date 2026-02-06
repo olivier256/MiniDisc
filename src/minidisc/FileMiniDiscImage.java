@@ -13,27 +13,27 @@ import java.util.Objects;
  */
 public final class FileMiniDiscImage implements MiniDiscImage {
     private final RandomAccessFile raf;
-    private final int clusters;
+    private final int nbOfClusters;
 
-    public FileMiniDiscImage(RandomAccessFile raf, int clusters) throws IOException {
+    public FileMiniDiscImage(RandomAccessFile raf, int nbOfClusters) throws IOException {
         this.raf = Objects.requireNonNull(raf, "raf");
-        if (clusters <= 0) throw new IllegalArgumentException("clusters must be > 0: " + clusters);
-        this.clusters = clusters;
+        if (nbOfClusters <= 0) throw new IllegalArgumentException("nbOfClusters must be > 0: " + nbOfClusters);
+        this.nbOfClusters = nbOfClusters;
 
-        long expectedSize = expectedSizeBytes(clusters);
+        long expectedSize = expectedSizeBytes(nbOfClusters);
         long actualSize = raf.length();
         if (actualSize != expectedSize) {
             throw new IllegalArgumentException("Invalid image size. expected=" + expectedSize + " actual=" + actualSize);
         }
     }
 
-    public static long expectedSizeBytes(int clusters) {
-        return (long) clusters * MiniDiscFormat.SECTORS_PER_CLUSTER * MiniDiscFormat.SECTOR_BYTES;
+    public static long expectedSizeBytes(int nbOfClusters) {
+        return (long) nbOfClusters * MiniDiscFormat.SECTORS_PER_CLUSTER * MiniDiscFormat.SECTOR_BYTES;
     }
 
     @Override
-    public int clusterCount() {
-        return clusters;
+    public int nbOfClusters() {
+        return nbOfClusters;
     }
 
     @Override
@@ -61,7 +61,7 @@ public final class FileMiniDiscImage implements MiniDiscImage {
     }
 
     private void validateAddress(int clusterIndex, int sectorIndex) {
-        if (clusterIndex < 0 || clusterIndex >= clusters) {
+        if (clusterIndex < 0 || clusterIndex >= nbOfClusters) {
             throw new IllegalArgumentException("clusterIndex out of range: " + clusterIndex);
         }
         if (sectorIndex < 0 || sectorIndex >= MiniDiscFormat.SECTORS_PER_CLUSTER) {
