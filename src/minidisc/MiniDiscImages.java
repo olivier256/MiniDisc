@@ -10,13 +10,7 @@ public final class MiniDiscImages {
     ) {
         return new LayoutCheckedMiniDiscImage(
                 raw,
-                MiniDiscLayout.LEAD_IN_START,
-                MiniDiscLayout.LEAD_IN_END_EXCL,
-                MiniDiscLayout.UTOC_START,
-                MiniDiscLayout.UTOC_END_EXCL,
-                MiniDiscLayout.PROGRAM_START,
-                MiniDiscLayout.programEndExclusive(type),
-                MiniDiscLayout.LEAD_OUT_CLUSTERS
+                type
         );
     }
 

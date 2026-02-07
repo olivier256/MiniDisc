@@ -10,51 +10,23 @@ import java.util.Objects;
 public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
     private final MiniDiscImage delegate;
 
-    private final int leadInStartClusterInclusive;   // typically 0
-    private final int leadInEndClusterExclusive;     // typically 3
-    private final int utocStartClusterInclusive;     // typically 3
-    private final int utocEndClusterExclusive;       // typically 0x32
-    private final int programStartClusterInclusive;  // typically 0x32
     private final int programEndClusterExclusive;  // 0x0715 (MD60) or 0x08CC (MD74)
-    private final int leadOutClusters;               // typically 115
 
     public LayoutCheckedMiniDiscImage(
             MiniDiscImage delegate,
-            int leadInStartClusterInclusive,
-            int leadInEndClusterExclusive,
-            int utocStartClusterInclusive,
-            int utocEndClusterExclusive,
-            int programStartClusterInclusive,
-            int programEndClusterExclusive,
-            int leadOutClusters
+            MiniDiscDiscType discType
     ) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
 
-        if (!(leadInStartClusterInclusive < leadInEndClusterExclusive &&
-                leadInEndClusterExclusive <= utocStartClusterInclusive &&
-                utocEndClusterExclusive <= programStartClusterInclusive &&
-                programStartClusterInclusive < programEndClusterExclusive)) {
-            throw new IllegalArgumentException("Incoherent cluster layout");
-        }
-        // Optionnel mais probablement vrai dans votre intention :
-        if (utocStartClusterInclusive >= utocEndClusterExclusive) {
-            throw new IllegalArgumentException("Invalid UTOC range");
-        }
-
-        int expected = programEndClusterExclusive + leadOutClusters;
+        int programEndClusterExclusive = MiniDiscLayout.programEndExclusive(discType);
+        int expected = programEndClusterExclusive + MiniDiscLayout.LEAD_OUT_CLUSTERS;
         if (delegate.nbOfClusters() != expected) {
             throw new IllegalArgumentException(
                     "Image cluster count mismatch: expected " + expected + ", got " + delegate.nbOfClusters()
             );
         }
 
-        this.leadInStartClusterInclusive = leadInStartClusterInclusive;
-        this.leadInEndClusterExclusive = leadInEndClusterExclusive;
-        this.utocStartClusterInclusive = utocStartClusterInclusive;
-        this.utocEndClusterExclusive = utocEndClusterExclusive;
-        this.programStartClusterInclusive = programStartClusterInclusive;
         this.programEndClusterExclusive = programEndClusterExclusive;
-        this.leadOutClusters = leadOutClusters;
     }
 
     @Override
@@ -88,24 +60,27 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
      */
     public void writeTocSector(MiniDiscAddress addr, byte[] tocData2336) throws IOException {
         Objects.requireNonNull(addr, "addr");
-        validateInLeadInOrUtoc(addr.clusterIndex());
+        int clusterIndex = addr.clusterIndex();
+        validateInLeadInOrUtoc(clusterIndex);
         MiniDiscSector sector = MiniDiscSector.fromAddressAndTocData(addr, tocData2336);
-        delegate.writeSector(addr.clusterIndex(), addr.sectorIndex(), sector.rawUnsafe());
+        delegate.writeSector(clusterIndex, addr.sectorIndex(), sector.rawUnsafe());
     }
 
-    private void validateInProgramArea(int clusterIndex) {
-        if (programStartClusterInclusive <= clusterIndex && clusterIndex < programEndClusterExclusive) {
-            return;
+    private static void validateInLeadInOrUtoc(int clusterIndex) {
+        boolean clusterIsInUtoc = clusterIndex >= MiniDiscLayout.UTOC_START && clusterIndex < MiniDiscLayout.UTOC_END_EXCL;
+        boolean clusterIsInLeadIn = clusterIndex >= MiniDiscLayout.LEAD_IN_START && clusterIndex < MiniDiscLayout.LEAD_IN_END_EXCL;
+        if (clusterIsInLeadIn || clusterIsInUtoc) {
+            // legal
         } else {
-            throw new IllegalArgumentException("Cluster not in program area: " + clusterIndex);
+            throw new IllegalArgumentException("Cluster not in lead-in/utoc area: " + clusterIndex);
         }
     }
 
-    private void validateInLeadInOrUtoc(int clusterIndex) {
-        boolean inLeadIn = clusterIndex >= leadInStartClusterInclusive && clusterIndex < leadInEndClusterExclusive;
-        boolean inUtoc = clusterIndex >= utocStartClusterInclusive && clusterIndex < utocEndClusterExclusive;
-        if (!inLeadIn && !inUtoc) {
-            throw new IllegalArgumentException("Cluster not in lead-in/utoc area: " + clusterIndex);
+    private void validateInProgramArea(int clusterIndex) {
+        if (MiniDiscLayout.PROGRAM_START <= clusterIndex && clusterIndex < programEndClusterExclusive) {
+            // legal
+        } else {
+            throw new IllegalArgumentException("Cluster not in program area: " + clusterIndex);
         }
     }
 
