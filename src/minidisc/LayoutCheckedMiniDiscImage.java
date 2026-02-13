@@ -3,6 +3,8 @@ package minidisc;
 import java.io.IOException;
 import java.util.Objects;
 
+import static minidisc.MiniDiscFormat.LEAD_OUT_CLUSTERS;
+
 /**
  * Cluster-range validation lives here.
  * Sector structure validation lives in MiniDiscSector factories.
@@ -19,7 +21,7 @@ public final class LayoutCheckedMiniDiscImage implements MiniDiscImage {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
 
         int programEndClusterExclusive = MiniDiscLayout.programEndExclusive(discType);
-        int expected = programEndClusterExclusive + MiniDiscLayout.LEAD_OUT_CLUSTERS;
+        int expected = programEndClusterExclusive + LEAD_OUT_CLUSTERS;
         if (delegate.nbOfClusters() != expected) {
             throw new IllegalArgumentException(
                     "Image cluster count mismatch: expected " + expected + ", got " + delegate.nbOfClusters()

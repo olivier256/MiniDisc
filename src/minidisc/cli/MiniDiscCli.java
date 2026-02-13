@@ -77,7 +77,7 @@ public final class MiniDiscCli {
 
     private static void createImage(File out, MiniDiscDiscType type, boolean force, boolean zeroFill) throws IOException {
         int totalClusters = MiniDiscLayout.totalClusters(type);
-        long totalBytes = (long) totalClusters * CLUSTER_BYTES;
+        long totalBytes = MiniDiscFormat.expectedImageBytes(MiniDiscLayout.totalClusters(type));
 
         if (out.exists()) {
             if (!force) die("File exists: " + out + " (use --force)");

@@ -46,6 +46,50 @@ public final class MiniDiscSector {
         return new MiniDiscSector(raw2352);
     }
 
+    public static MiniDiscSector fromAddressWithLinkAndZeroPayload(MiniDiscAddress addr) {
+        Objects.requireNonNull(addr, "addr");
+        if (addr.sectorRole() != SectorRole.LINK) {
+            throw new IllegalArgumentException("LINK payload can only be written to LINK sectors (32..34)");
+        }
+        return fromAddressAndData2332Layout(addr, new byte[AUDIO_BLOCK_BYTES]);
+    }
+
+    public static MiniDiscSector fromAddressWithSubdataAndZeroPayload(MiniDiscAddress addr) {
+        Objects.requireNonNull(addr, "addr");
+        if (addr.sectorRole() != SectorRole.SUBDATA) {
+            throw new IllegalArgumentException("SUBDATA payload can only be written to SUBDATA sector (35)");
+        }
+        return fromAddressAndData2332Layout(addr, new byte[AUDIO_BLOCK_BYTES]);
+    }
+
+    /**
+     * Same physical layout as your audio sectors (16B header + 4x00 + 2332 data),
+     * but semantically not "audio".
+     */
+    private static MiniDiscSector fromAddressAndData2332Layout(MiniDiscAddress addr, byte[] data2332) {
+        if (data2332.length != AUDIO_BLOCK_BYTES) {
+            throw new IllegalArgumentException("Data must be exactly " + AUDIO_BLOCK_BYTES + " bytes");
+        }
+
+        byte[] raw = new byte[MiniDiscFormat.SECTOR_BYTES];
+
+        System.arraycopy(DEFAULT_SYNC, 0, raw, 0, SYNC_BYTES);
+
+        addr.writeAddressToHeader(raw, HEADER_OFFSET);
+        raw[MODE_OFFSET] = MiniDiscSectorMode.MINI_DISC.code();
+
+        // separator (zeros)
+        raw[AUDIO_SEP_OFFSET] = 0;
+        raw[AUDIO_SEP_OFFSET + 1] = 0;
+        raw[AUDIO_SEP_OFFSET + 2] = 0;
+        raw[AUDIO_SEP_OFFSET + 3] = 0;
+
+        System.arraycopy(data2332, 0, raw, AUDIO_BLOCK_OFFSET, AUDIO_BLOCK_BYTES);
+
+        return new MiniDiscSector(raw);
+    }
+
+
     /**
      * Audio sector: header + 4x00 separator + 2332-byte Audio Block. Mode forced to 2.
      */
@@ -59,26 +103,7 @@ public final class MiniDiscSector {
         if (audioBlock2332.length != AUDIO_BLOCK_BYTES) {
             throw new IllegalArgumentException("AudioBlock must be exactly " + AUDIO_BLOCK_BYTES + " bytes");
         }
-
-        byte[] raw = new byte[MiniDiscFormat.SECTOR_BYTES];
-
-        // sync (12)
-        System.arraycopy(DEFAULT_SYNC, 0, raw, 0, SYNC_BYTES);
-
-        // address (3) + mode (1)
-        addr.writeAddressToHeader(raw, HEADER_OFFSET);
-        raw[MODE_OFFSET] = MiniDiscSectorMode.MINI_DISC.code();
-
-        // 4x00 separator (already zeros, keep explicit if you prefer)
-        raw[AUDIO_SEP_OFFSET] = 0;
-        raw[AUDIO_SEP_OFFSET + 1] = 0;
-        raw[AUDIO_SEP_OFFSET + 2] = 0;
-        raw[AUDIO_SEP_OFFSET + 3] = 0;
-
-        // audio block (2332) at offset 20
-        System.arraycopy(audioBlock2332, 0, raw, AUDIO_BLOCK_OFFSET, AUDIO_BLOCK_BYTES);
-
-        return new MiniDiscSector(raw);
+        return fromAddressAndData2332Layout(addr, audioBlock2332);
     }
 
     /**
@@ -104,7 +129,6 @@ public final class MiniDiscSector {
 
         return new MiniDiscSector(raw);
     }
-
     /**
      * Safe copy out.
      */

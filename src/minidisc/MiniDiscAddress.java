@@ -3,8 +3,14 @@ package minidisc;
 /**
  * Logical address in the image: cluster + sectorIndex (0..35).
  * This is NOT the “sector address byte” written in headers (FC/FD/... for LINK/SUBDATA).
+ * @param clusterIndex
+ * @param sectorIndex secotrIndex (0…35).This is NOT the “sector address byte” written in headers (FC/FD/... for LINK/SUBDATA).
  */
 public record MiniDiscAddress(int clusterIndex, int sectorIndex) {
+    /**
+     * @param clusterIndex
+     * @param sectorIndex sector index (0…35).This is NOT the “sector address byte” written in headers (FC/FD/... for LINK/SUBDATA).
+     *                    */
     public MiniDiscAddress {
         if (clusterIndex < 0 || clusterIndex > 0xFFFF) {
             throw new IllegalArgumentException("clusterIndex out of range: " + clusterIndex);
