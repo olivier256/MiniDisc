@@ -15,8 +15,9 @@ public final class MiniDiscSector {
     public static final int TOC_DATA_BYTES = MiniDiscFormat.SECTOR_BYTES - TOC_DATA_OFFSET;     // 2336
     public static final int AUDIO_BLOCK_BYTES = MiniDiscFormat.SECTOR_BYTES - AUDIO_BLOCK_OFFSET; // 2332
 
-    // TODO: replace with the real sync pattern when you decide it.
-    private static final byte[] DEFAULT_SYNC = new byte[SYNC_BYTES];
+    /* CD / CD-ROM Mode 2   */
+    private static final byte bFF = (byte) 0xFF;
+    private static final byte[] DEFAULT_SYNC = { 0x00, bFF , bFF , bFF , bFF , bFF , bFF , bFF , bFF , bFF , bFF, 00};
 
     private final byte[] raw2352; // always 2352
 
